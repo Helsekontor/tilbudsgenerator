@@ -155,11 +155,14 @@ function Bullet({text}){
 }
 
 /* ── Kontrollpanel ───────────────────────────────────────────────────── */
-function Field({s, upd, label, k, ph, type='text'}) {
+function Field({s, upd, label, k, ph, type='text', badge=null}) {
   return (
     <div style={{marginBottom:14}}>
-      <label style={{display:'block',fontSize:10,fontWeight:700,letterSpacing:'0.06em',
-        textTransform:'uppercase',color:C.muted,marginBottom:5}}>{label}</label>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+        <label style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',
+          textTransform:'uppercase',color:C.muted}}>{label}</label>
+        {badge}
+      </div>
       <input type={type} value={s[k]} placeholder={ph||''} onChange={e=>upd(k,e.target.value)}
         style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e4e3ea',borderRadius:8,
           fontFamily:'inherit',fontSize:14,color:C.ink,background:'#fff',
@@ -181,7 +184,7 @@ function SectionLabel({children}) {
   );
 }
 
-function Panel({s,upd,tab,setTab,printDoc}){
+function Panel({s,upd,tab,setTab,printDoc,brregStatus}){
   const n=s.leger, sel=s.pkg;
   const baseHonorar = TOT[sel][n];
   const honorar = s.honorarOvrstyr ? parseFloat(s.honorarOvrstyr.replace(/\s/g,'').replace(',','.')) || baseHonorar : baseHonorar;
@@ -220,7 +223,13 @@ function Panel({s,upd,tab,setTab,printDoc}){
       {/* Kundeinformasjon */}
       <SectionLabel>Kunde</SectionLabel>
       <Field s={s} upd={upd} label="Firmanavn" k="kunde" ph="Moss Legesenter"/>
-      <Field s={s} upd={upd} label="Organisasjonsnummer" k="orgnr" ph="000 000 000"/>
+      <Field s={s} upd={upd} label="Organisasjonsnummer" k="orgnr" ph="000 000 000"
+        badge={
+          brregStatus==='loading' ? <span style={{fontSize:10,color:C.muted,fontFamily:'system-ui,sans-serif'}}>Søker…</span>
+          : brregStatus==='funnet' ? <span style={{fontSize:10,color:'#2a8a4a',fontWeight:700,fontFamily:'system-ui,sans-serif'}}>✓ Funnet</span>
+          : brregStatus==='feil'   ? <span style={{fontSize:10,color:'#b03030',fontFamily:'system-ui,sans-serif'}}>Ikke funnet</span>
+          : null
+        }/>
       <Field s={s} upd={upd} label="Adresse" k="adresse" ph="Gateveien 1"/>
       <Field s={s} upd={upd} label="Postnr / sted" k="postnr" ph="0000 Oslo"/>
 
@@ -1017,7 +1026,29 @@ function App(){
     honorarOvrstyr:'', spesielt:'', svarfrist:'1 måned',
   });
   const [tab, setTab] = useState('tilbud');
+  const [brregStatus, setBrregStatus] = useState(''); // '' | 'loading' | 'funnet' | 'feil'
   const upd = (k,v) => setS(p=>({...p,[k]:v}));
+
+  useEffect(()=>{
+    const clean = s.orgnr.replace(/\s/g,'');
+    if(!/^\d{9}$/.test(clean)){ setBrregStatus(''); return; }
+    setBrregStatus('loading');
+    fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${clean}`)
+      .then(r=>{ if(!r.ok) throw new Error('ikke funnet'); return r.json(); })
+      .then(data=>{
+        const adr = data.forretningsadresse;
+        setS(p=>({
+          ...p,
+          kunde: data.navn ? data.navn.charAt(0)+data.navn.slice(1).toLowerCase() : p.kunde,
+          adresse: adr?.adresse?.[0] || p.adresse,
+          postnr: adr?.postnummer && adr?.poststed
+            ? adr.postnummer+' '+adr.poststed.charAt(0)+adr.poststed.slice(1).toLowerCase()
+            : p.postnr,
+        }));
+        setBrregStatus('funnet');
+      })
+      .catch(()=>setBrregStatus('feil'));
+  },[s.orgnr]);
 
   useEffect(()=>{
     const el=document.createElement('style'); el.textContent=PRINT_CSS; document.head.appendChild(el);
@@ -1056,7 +1087,7 @@ function App(){
 
   return(
     <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#eceaf2'}}>
-      <Panel s={s} upd={upd} tab={tab} setTab={setTab} printDoc={printDoc}/>
+      <Panel s={s} upd={upd} tab={tab} setTab={setTab} printDoc={printDoc} brregStatus={brregStatus}/>
       <div className="doc-scroll" style={{flex:1,overflowY:'auto',padding:'20px 28px',display:'flex',flexDirection:'column',gap:16,alignItems:'center'}}>
         {/* Tab-knapper (skjerm) */}
         <div className="tab-bar no-print" style={{display:'flex',gap:8,alignSelf:'flex-start'}}>
