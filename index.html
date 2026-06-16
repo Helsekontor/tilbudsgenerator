@@ -470,6 +470,22 @@ function Panel({s,upd,tab,setTab,printDoc,brregStatus,showMail,setShowMail}){
       <p style={{fontSize:10,color:C.muted,marginTop:10,textAlign:'center',lineHeight:1.5}}>
         Velg «Lagre som PDF» og slå på <em>Bakgrunnsgrafikk</em> i utskriftsdialogen.
       </p>
+      <button onClick={()=>{
+        if(window.confirm('Nullstille alle felt?')){
+          const today=new Date().toISOString().slice(0,10);
+          const fresh={kunde:'',orgnr:'',adresse:'',postnr:'',
+            kontakt:'Mikkel Øwre',epost:'mikkel@hkf.no',telefon:'+47 94 00 20 44',
+            dato:today,oppstartsdato:'',leger:2,pkg:'komplett',
+            honorarOvrstyr:'',spesielt:'',svarfrist:'1 måned',
+            opptrapping:false,opptrappingPakke:'drift',opptrappingMnd:2};
+          try{localStorage.removeItem('hkf_tilbud');}catch(e){}
+          setS(fresh);
+        }
+      }} style={{marginTop:6,width:'100%',padding:'7px',background:'transparent',
+        border:'1px solid #e4e3ea',borderRadius:8,fontSize:11,color:C.muted,
+        cursor:'pointer',fontFamily:'inherit'}}>
+        Nullstill skjema
+      </button>
 
       {showMail&&(
         <div style={{marginTop:12}}>
@@ -1276,16 +1292,32 @@ function ContractDoc({s}){
 /* ── App ─────────────────────────────────────────────────────────────── */
 function App(){
   const today = new Date().toISOString().slice(0,10);
-  const [s, setS] = useState({
+  const defaultState = {
     kunde:'', orgnr:'', adresse:'', postnr:'',
     kontakt:'Mikkel Øwre', epost:'mikkel@hkf.no', telefon:'+47 94 00 20 44',
     dato:today, oppstartsdato:'', leger:2, pkg:'komplett',
     honorarOvrstyr:'', spesielt:'', svarfrist:'1 måned', opptrapping:false, opptrappingPakke:'drift', opptrappingMnd:2,
+  };
+  const [s, setS] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hkf_tilbud');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Behold dagens dato hvis ingen dato er lagret
+        return { ...defaultState, ...parsed, dato: parsed.dato || today };
+      }
+    } catch(e) {}
+    return defaultState;
   });
   const [tab, setTab] = useState('tilbud');
   const [brregStatus, setBrregStatus] = useState('');
   const [showMail, setShowMail] = useState(false); // '' | 'loading' | 'funnet' | 'feil'
   const upd = (k,v) => setS(p=>({...p,[k]:v}));
+
+  // Lagre til localStorage ved hver endring
+  useEffect(()=>{
+    try { localStorage.setItem('hkf_tilbud', JSON.stringify(s)); } catch(e) {}
+  }, [s]);
 
   useEffect(()=>{
     const clean = s.orgnr.replace(/\s/g,'');
