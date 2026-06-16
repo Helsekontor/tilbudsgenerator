@@ -397,28 +397,71 @@ function Page1({s}){
         </div>
 
         {/* Valgt løsning — rad */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',
-          paddingBottom:12,borderBottom:`1px solid ${C.lav}`}}>
-          <div>
-            <div style={{fontFamily:'Georgia,serif',fontSize:14,fontWeight:700,
-              color:C.hero,lineHeight:1.1,marginBottom:3}}>
-              {NAMES[sel]}
+        <div style={{paddingBottom:12,borderBottom:`1px solid ${C.lav}`}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+            <div>
+              <div style={{fontFamily:'Georgia,serif',fontSize:14,fontWeight:700,
+                color:C.hero,lineHeight:1.1,marginBottom:3}}>
+                {s.opptrapping
+                  ? `${NAMES[s.opptrappingPakke]} → ${NAMES[sel]}`
+                  : NAMES[sel]}
+              </div>
+              {!s.opptrapping&&<div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.muted}}>
+                {MODUL[sel]}  ·  {kr(perLege)} per lege  ·  {n}{n===1?' lege':' leger'}
+              </div>}
+              {!s.opptrapping&&isKomp&&<div style={{fontFamily:'system-ui,sans-serif',fontSize:7.5,
+                color:C.gold,fontWeight:600,marginTop:2}}>
+                Rabattert fra {kr(ord)} — spar {kr(sav)} per måned
+              </div>}
+              {s.opptrapping&&<div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.muted,marginTop:2}}>
+                Opptrappingsavtale  ·  {n}{n===1?' lege':' leger'}
+              </div>}
             </div>
-            <div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.muted}}>
-              {MODUL[sel]}  ·  {kr(perLege)} per lege  ·  {n}{n===1?' lege':' leger'}
+            <div style={{textAlign:'right',flexShrink:0,paddingLeft:16}}>
+              {s.opptrapping
+                ? <div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.muted,textAlign:'right'}}>
+                    <div>Mnd 1–{s.opptrappingMnd}</div>
+                    <div style={{fontFamily:'Georgia,serif',fontSize:16,fontWeight:700,color:C.ink,lineHeight:1.1}}>{kr(TOT[s.opptrappingPakke][n])}</div>
+                    <div style={{marginTop:5}}>Fra mnd {s.opptrappingMnd+1}</div>
+                    <div style={{fontFamily:'Georgia,serif',fontSize:16,fontWeight:700,color:C.gold,lineHeight:1.1}}>{kr(total)}</div>
+                    <div style={{fontSize:7.5,marginTop:1}}>per måned eks. mva.</div>
+                  </div>
+                : <>
+                    <div style={{fontFamily:'Georgia,serif',fontSize:22,fontWeight:700,
+                      color:C.ink,lineHeight:1}}>{kr(total)}</div>
+                    <div style={{fontFamily:'system-ui,sans-serif',fontSize:7.5,color:C.muted,marginTop:1}}>
+                      per måned eks. mva.
+                    </div>
+                  </>
+              }
             </div>
-            {isKomp&&<div style={{fontFamily:'system-ui,sans-serif',fontSize:7.5,
-              color:C.gold,fontWeight:600,marginTop:2}}>
-              Rabattert fra {kr(ord)} — spar {kr(sav)} per måned
-            </div>}
           </div>
-          <div style={{textAlign:'right',flexShrink:0,paddingLeft:16}}>
-            <div style={{fontFamily:'Georgia,serif',fontSize:22,fontWeight:700,
-              color:C.ink,lineHeight:1}}>{kr(total)}</div>
-            <div style={{fontFamily:'system-ui,sans-serif',fontSize:7.5,color:C.muted,marginTop:1}}>
-              per måned eks. mva.
+          {s.opptrapping&&(
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginTop:8}}>
+              <div style={{background:'#f7f6fb',borderRadius:6,padding:'6px 10px',border:`1px solid ${C.lav}`}}>
+                <div style={{fontFamily:'system-ui,sans-serif',fontSize:7,color:C.muted,marginBottom:1}}>
+                  MND 1–{s.opptrappingMnd}
+                </div>
+                <div style={{fontFamily:'Georgia,serif',fontSize:11,fontWeight:700,color:C.hero}}>
+                  {NAMES[s.opptrappingPakke]}
+                </div>
+                <div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.muted}}>
+                  {kr(TOT[s.opptrappingPakke][n])} /mnd
+                </div>
+              </div>
+              <div style={{background:C.lav,borderRadius:6,padding:'6px 10px',border:`1px solid ${C.brand}`}}>
+                <div style={{fontFamily:'system-ui,sans-serif',fontSize:7,color:C.muted,marginBottom:1}}>
+                  FRA MND {s.opptrappingMnd+1}
+                </div>
+                <div style={{fontFamily:'Georgia,serif',fontSize:11,fontWeight:700,color:C.hero}}>
+                  {NAMES[sel]}
+                </div>
+                <div style={{fontFamily:'system-ui,sans-serif',fontSize:8,color:C.gold,fontWeight:600}}>
+                  {kr(total)} /mnd
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -427,9 +470,9 @@ function Page1({s}){
 
         <div style={{fontFamily:'system-ui,sans-serif',fontSize:8.5,color:C.muted,
           lineHeight:1.6,marginBottom:s.spesielt?10:14}}>
-          Vi tilbyr administrative tjenester i moduler, slik at dere kan velge nivået
-          som passer. Under er en samlet prisoversikt — videre i dokumentet er full
-          beskrivelse av hva Helsekontor Forvaltning AS gir dere og hva hver modul inneholder.
+          {s.opptrapping
+            ? `Vi starter med ${NAMES[s.opptrappingPakke]} i ${s.opptrappingMnd} måneder, og trapper opp til ${NAMES[sel]} fra måned ${s.opptrappingMnd+1}. Under er en samlet prisoversikt for begge perioder.`
+            : 'Vi tilbyr administrative tjenester i moduler, slik at dere kan velge nivået som passer. Under er en samlet prisoversikt — videre i dokumentet er full beskrivelse av hva Helsekontor Forvaltning AS gir dere og hva hver modul inneholder.'}
         </div>
 
         {s.spesielt&&(
@@ -486,7 +529,9 @@ function Page1({s}){
           </tbody>
         </table>
         <div style={{fontFamily:'system-ui,sans-serif',fontSize:7,color:C.muted,marginTop:5}}>
-          Den markerte raden er løsningen dere har valgt. Alle priser er eks. mva.
+          {s.opptrapping
+            ? `Opptrappingsavtale: ${NAMES[s.opptrappingPakke]} mnd 1–${s.opptrappingMnd} (${kr(TOT[s.opptrappingPakke][n])}/mnd), deretter ${NAMES[sel]} fra mnd ${s.opptrappingMnd+1} (${kr(total)}/mnd). Alle priser eks. mva.`
+            : 'Den markerte raden er løsningen dere har valgt. Alle priser er eks. mva.'}
         </div>
       </div>
 
