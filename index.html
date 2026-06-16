@@ -175,6 +175,38 @@ function Field({s, upd, label, k, ph, type='text', badge=null}) {
   );
 }
 
+function buildMailText(s, n, sel, total) {
+  const pakke = NAMES[sel];
+  const modul = MODUL[sel];
+  const pris  = kr(total);
+  const perLege = kr(Math.round(total/n));
+  const svarfrist = s.svarfrist || '1 måned';
+  const opptrappingLinje = s.opptrapping
+    ? `\nMerk: Avtalen starter med ${NAMES[s.opptrappingPakke]} i ${s.opptrappingMnd} måneder (${kr(TOT[s.opptrappingPakke][n])}/mnd), og trapper opp til ${pakke} fra måned ${s.opptrappingMnd + 1}.`
+    : '';
+  const spesieltLinje = s.spesielt ? `\nSpesielle vilkår: ${s.spesielt}` : '';
+
+  return `Hei ${s.kontakt || ''},
+
+Takk for interessen for Helsekontor Forvaltning AS. Som avtalt sender vi over vårt tilbud.
+
+Tilbud til: ${s.kunde || '—'}
+Løsning: ${pakke} (${modul})
+Antall leger: ${n}
+Månedlig honorar: ${pris} eks. mva.
+Pris per lege: ${perLege}/mnd${opptrappingLinje}${spesieltLinje}
+
+Svarfrist: innen ${svarfrist}
+
+Vi tilpasser gjerne løsningen etter behovet deres. Ta gjerne kontakt om du har spørsmål.
+
+Med vennlig hilsen
+${s.kontakt || 'Mikkel Øwre'}
+Helsekontor Forvaltning AS
+Brynsveien 12, 0667 Oslo
+${s.epost || 'post@helsekontor.no'} | ${s.telefon || '+47 94 00 20 44'}`;
+}
+
 function SectionLabel({children}) {
   return (
     <div style={{display:'flex',alignItems:'center',gap:8,margin:'18px 0 12px'}}>
@@ -184,7 +216,7 @@ function SectionLabel({children}) {
   );
 }
 
-function Panel({s,upd,tab,setTab,printDoc,brregStatus}){
+function Panel({s,upd,tab,setTab,printDoc,brregStatus,showMail,setShowMail}){
   const n=s.leger, sel=s.pkg;
   const baseHonorar = TOT[sel][n];
   const honorar = s.honorarOvrstyr ? parseFloat(s.honorarOvrstyr.replace(/\s/g,'').replace(',','.')) || baseHonorar : baseHonorar;
@@ -316,7 +348,20 @@ function Panel({s,upd,tab,setTab,printDoc,brregStatus}){
         )}
       </div>
 
-      <Field s={s} upd={upd} label="Tilbudsdato" k="dato" type="date"/>
+      <div style={{marginBottom:14}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+          <label style={{fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:C.muted}}>Tilbudsdato</label>
+        </div>
+        <input type="date" value={s.dato} onChange={e=>upd('dato',e.target.value)}
+          style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e4e3ea',borderRadius:8,
+            fontFamily:'inherit',fontSize:14,color:C.ink,background:'#fff',
+            boxSizing:'border-box',outline:'none',boxShadow:'0 1px 2px rgba(0,0,0,.04)'}}
+          onFocus={e=>e.target.style.borderColor=C.hero}
+          onBlur={e=>e.target.style.borderColor='#e4e3ea'}/>
+        {s.dato&&<div style={{fontSize:10,color:C.muted,marginTop:4,fontFamily:'system-ui,sans-serif'}}>
+          Vises i dokumentet som: {s.dato.split('-').reverse().join('.')}
+        </div>}
+      </div>
       <Field s={s} upd={upd} label="Oppstartsdato" k="oppstartsdato" ph="01.09.2026"/>
       <div style={{marginBottom:14}}>
         <label style={{display:'block',fontSize:10,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:C.muted,marginBottom:5}}>
@@ -353,10 +398,44 @@ function Panel({s,upd,tab,setTab,printDoc,brregStatus}){
           boxShadow:'0 2px 8px rgba(73,72,96,.25)'}}>
           Skriv ut kontrakt
         </button>
+        <button onClick={()=>setShowMail(v=>!v)}
+          style={{width:'100%',padding:'11px',background:showMail?C.lav:'#fff',
+          color:C.hero,border:`1.5px solid ${showMail?C.brand:C.lav}`,borderRadius:9,
+          fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>
+          ✉ {showMail ? 'Skjul e-postutkast' : 'Generer e-postutkast'}
+        </button>
       </div>
       <p style={{fontSize:10,color:C.muted,marginTop:10,textAlign:'center',lineHeight:1.5}}>
         Velg «Lagre som PDF» og slå på <em>Bakgrunnsgrafikk</em> i utskriftsdialogen.
       </p>
+
+      {showMail&&(
+        <div style={{marginTop:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+            <span style={{fontSize:11,fontWeight:700,color:C.ink}}>E-postutkast</span>
+            <button onClick={()=>{
+              const el = document.getElementById('mail-text');
+              if(el){ el.select(); document.execCommand('copy');
+                el.blur();
+              }
+            }} style={{fontSize:11,padding:'4px 10px',border:`1px solid ${C.lav}`,borderRadius:6,
+              background:'#fff',color:C.hero,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>
+              Kopier
+            </button>
+          </div>
+          <textarea id="mail-text" readOnly
+            value={buildMailText(s,n,sel,total)}
+            style={{width:'100%',height:220,padding:'10px 12px',border:`1.5px solid ${C.lav}`,
+              borderRadius:8,fontFamily:'system-ui,sans-serif',fontSize:11.5,color:C.ink,
+              lineHeight:1.6,resize:'vertical',background:'#faf9fc',boxSizing:'border-box',
+              outline:'none'}}
+            onClick={e=>e.target.select()}
+          />
+          <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+            Klikk i tekstboksen for å markere alt, eller bruk Kopier-knappen.
+          </div>
+        </div>
+      )}
       </div>
     </aside>
   );
@@ -1142,7 +1221,8 @@ function App(){
     honorarOvrstyr:'', spesielt:'', svarfrist:'1 måned', opptrapping:false, opptrappingPakke:'drift', opptrappingMnd:2,
   });
   const [tab, setTab] = useState('tilbud');
-  const [brregStatus, setBrregStatus] = useState(''); // '' | 'loading' | 'funnet' | 'feil'
+  const [brregStatus, setBrregStatus] = useState('');
+  const [showMail, setShowMail] = useState(false); // '' | 'loading' | 'funnet' | 'feil'
   const upd = (k,v) => setS(p=>({...p,[k]:v}));
 
   useEffect(()=>{
@@ -1198,12 +1278,17 @@ function App(){
     pw.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + content.innerHTML + '</body></html>');
     pw.document.close();
     pw.focus();
+    // Sett tittel = filnavn slik at nettleseren foreslår dette ved «Lagre som PDF»
+    const safeName = (s.kunde||'Tilbud').replace(/[^a-zA-Z0-9æøåÆØÅ\s\-]/g,'').trim().replace(/\s+/g,'_');
+    const pakkeSuffix = isTilbud ? {'drift':'Drift','okonomi':'Okonomi','komplett':'Komplett'}[s.pkg]||'' : 'Kontrakt';
+    const datoSuffix = s.dato ? s.dato.replace(/\./g,'-') : '';
+    pw.document.title = [safeName, pakkeSuffix, datoSuffix].filter(Boolean).join('_');
     setTimeout(() => { pw.print(); pw.close(); }, 700);
   };
 
   return(
     <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#eceaf2'}}>
-      <Panel s={s} upd={upd} tab={tab} setTab={setTab} printDoc={printDoc} brregStatus={brregStatus}/>
+      <Panel s={s} upd={upd} tab={tab} setTab={setTab} printDoc={printDoc} brregStatus={brregStatus} showMail={showMail} setShowMail={setShowMail}/>
       <div className="doc-scroll" style={{flex:1,overflowY:'auto',padding:'20px 28px',display:'flex',flexDirection:'column',gap:16,alignItems:'center'}}>
         {/* Tab-knapper (skjerm) */}
         <div className="tab-bar no-print" style={{display:'flex',gap:8,alignSelf:'flex-start'}}>
