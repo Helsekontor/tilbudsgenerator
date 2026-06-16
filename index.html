@@ -260,6 +260,62 @@ function Panel({s,upd,tab,setTab,printDoc,brregStatus}){
           </div>
         ))}
       </div>
+      {/* ── Opptrappingsavtale ── */}
+      <div style={{marginBottom:14}}>
+        <div onClick={()=>upd('opptrapping',!s.opptrapping)}
+          style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',marginBottom:s.opptrapping?10:0}}>
+          <div style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${s.opptrapping?C.hero:'#d0cfe0'}`,
+            background:s.opptrapping?C.hero:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            {s.opptrapping&&<span style={{color:'#fff',fontSize:10,fontWeight:700,lineHeight:1}}>✓</span>}
+          </div>
+          <span style={{fontSize:11,fontWeight:700,color:C.ink,userSelect:'none'}}>Opptrappingsavtale</span>
+        </div>
+        {s.opptrapping&&(
+          <div style={{background:'#f7f6fb',borderRadius:8,padding:'12px 13px',border:`1px solid ${C.lav}`}}>
+            <div style={{fontFamily:'system-ui,sans-serif',fontSize:10,color:C.muted,marginBottom:10}}>
+              Start med enklere pakke, gå over til valgt løsning etter en periode.
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,color:C.muted,whiteSpace:'nowrap'}}>Start med</span>
+              <select value={s.opptrappingPakke} onChange={e=>upd('opptrappingPakke',e.target.value)}
+                style={{flex:1,minWidth:0,padding:'6px 8px',border:'1px solid #e4e3ea',borderRadius:7,
+                  fontFamily:'inherit',fontSize:12,color:C.ink,background:'#fff'}}>
+                {PKGS.filter(p=>p.key!==sel).map(p=>(
+                  <option key={p.key} value={p.key}>{p.t}</option>
+                ))}
+              </select>
+              <span style={{fontSize:11,color:C.muted,whiteSpace:'nowrap'}}>i</span>
+              <div style={{display:'flex',border:'1px solid #e4e3ea',borderRadius:7,overflow:'hidden'}}>
+                <button onClick={()=>upd('opptrappingMnd',Math.max(1,s.opptrappingMnd-1))}
+                  style={{width:28,height:32,border:'none',background:'#fff',color:C.hero,fontSize:16,cursor:'pointer',fontWeight:300}}>−</button>
+                <span style={{width:30,textAlign:'center',lineHeight:'32px',fontWeight:700,fontSize:13,
+                  borderLeft:'1px solid #e4e3ea',borderRight:'1px solid #e4e3ea'}}>{s.opptrappingMnd}</span>
+                <button onClick={()=>upd('opptrappingMnd',s.opptrappingMnd+1)}
+                  style={{width:28,height:32,border:'none',background:'#fff',color:C.hero,fontSize:16,cursor:'pointer',fontWeight:300}}>+</button>
+              </div>
+              <span style={{fontSize:11,color:C.muted}}>mnd</span>
+            </div>
+            {/* Prissammendrag */}
+            <div style={{borderTop:`1px solid ${C.lav}`,paddingTop:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                <span style={{fontSize:10,color:C.ink}}>Mnd 1–{s.opptrappingMnd}: {NAMES[s.opptrappingPakke]}</span>
+                <span style={{fontSize:10,fontWeight:600,color:C.ink}}>{kr(TOT[s.opptrappingPakke][n])}/mnd</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                <span style={{fontSize:10,color:C.ink}}>Fra mnd {s.opptrappingMnd+1}: {NAMES[sel]}</span>
+                <span style={{fontSize:10,fontWeight:600,color:C.ink}}>{kr(TOT[sel][n])}/mnd</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',paddingTop:6,borderTop:`1px solid ${C.lav}`}}>
+                <span style={{fontSize:10,fontWeight:700,color:C.muted}}>Total første 12 mnd</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.hero}}>
+                  {kr(TOT[s.opptrappingPakke][n]*s.opptrappingMnd + TOT[sel][n]*(12-s.opptrappingMnd))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <Field s={s} upd={upd} label="Tilbudsdato" k="dato" type="date"/>
       <Field s={s} upd={upd} label="Oppstartsdato" k="oppstartsdato" ph="01.09.2026"/>
       <div style={{marginBottom:14}}>
@@ -729,9 +785,24 @@ function ContractDoc({s}){
           <SH>Priser og vilkår</SH>
           <table style={{width:'100%',borderCollapse:'collapse',marginBottom:10}}>
             <tbody>
-              {[['Abonnement',PAKKE[sel]],['Oppstartskostnad','0 kr'],['Oppstartsdato',s.oppstartsdato||'—'],['Månedlig honorar',krNo(honorar)+(s.honorarOvrstyr?' (tilpasset pris)':'')]].map(([k,v])=>(
-                <tr key={k}><td style={{...TDL,width:'40%'}}>{k}</td><td style={{...TD,fontWeight:600,color:C.ink}}>{v}</td></tr>
-              ))}
+              {s.opptrapping ? (
+                <>
+                  <tr><td style={{...TDL,width:'40%'}}>Startabonnement</td><td style={{...TD,fontWeight:600,color:C.ink}}>{PAKKE[s.opptrappingPakke]}</td></tr>
+                  <tr><td style={TDL}>Varighet startperiode</td><td style={{...TD,fontWeight:600,color:C.ink}}>Mnd 1–{s.opptrappingMnd}</td></tr>
+                  <tr><td style={TDL}>Honorar startperiode</td><td style={{...TD,fontWeight:600,color:C.ink}}>{krNo(TOT[s.opptrappingPakke][n])} /mnd</td></tr>
+                  <tr><td style={{...TDL,borderTop:`2px solid ${C.lav}`}}>Fullt abonnement</td><td style={{...TD,fontWeight:700,color:C.ink,borderTop:`2px solid ${C.lav}`}}>{PAKKE[sel]}</td></tr>
+                  <tr><td style={TDL}>Overgang fra</td><td style={{...TD,fontWeight:600,color:C.ink}}>Mnd {s.opptrappingMnd+1}</td></tr>
+                  <tr><td style={TDL}>Honorar fullt abonnement</td><td style={{...TD,fontWeight:700,color:C.ink}}>{krNo(honorar)} /mnd</td></tr>
+                  <tr><td style={TDL}>Oppstartskostnad</td><td style={TD}>0 kr</td></tr>
+                  <tr><td style={TDL}>Oppstartsdato</td><td style={TD}>{s.oppstartsdato||'—'}</td></tr>
+                </>
+              ) : (
+                <>
+                  {[['Abonnement',PAKKE[sel]],['Oppstartskostnad','0 kr'],['Oppstartsdato',s.oppstartsdato||'—'],['Månedlig honorar',krNo(honorar)+(s.honorarOvrstyr?' (tilpasset pris)':'')]].map(([k,v])=>(
+                    <tr key={k}><td style={{...TDL,width:'40%'}}>{k}</td><td style={{...TD,fontWeight:600,color:C.ink}}>{v}</td></tr>
+                  ))}
+                </>
+              )}
             </tbody>
           </table>
           <P>Faste honorar faktureres forskuddsvis hvert kvartal. Variable honorar faktureres fortløpende etterskuddsvis hvis ikke annet er nevnt i avtale. Alle priser er oppgitt eks. mva.</P>
@@ -1023,7 +1094,7 @@ function App(){
     kunde:'', orgnr:'', adresse:'', postnr:'',
     kontakt:'Mikkel Øwre', epost:'mikkel@hkf.no', telefon:'+47 94 00 20 44',
     dato:today, oppstartsdato:'', leger:2, pkg:'komplett',
-    honorarOvrstyr:'', spesielt:'', svarfrist:'1 måned',
+    honorarOvrstyr:'', spesielt:'', svarfrist:'1 måned', opptrapping:false, opptrappingPakke:'drift', opptrappingMnd:2,
   });
   const [tab, setTab] = useState('tilbud');
   const [brregStatus, setBrregStatus] = useState(''); // '' | 'loading' | 'funnet' | 'feil'
